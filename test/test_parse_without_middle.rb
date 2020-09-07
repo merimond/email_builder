@@ -58,4 +58,19 @@ describe EmailBuilder do
     assert_nil format
   end
 
+  it "parses `fml` format" do
+    format = EmailBuilder.parse("mjj@example.org", NO_MIDDLE)
+    assert_equal "fml", format
+  end
+
+  it "parses `lastf` format" do
+    format = EmailBuilder.parse("jacksonm@example.org", NO_MIDDLE)
+    assert_equal "lastf", format
+  end
+
+  it "parses `first.l` format" do
+    format = EmailBuilder.parse("michael.j@example.org", ALL_ATTS)
+    assert_equal "first.l", format
+  end
+
 end

@@ -1,122 +1,101 @@
-require 'securerandom'
-require 'unicode'
-require 'unidecoder'
-require 'email_builder/diminutives'
+require 'email_builder/name'
 
 module EmailBuilder
 
-  def self.sanitize(string)
-    unless string.is_a?(String)
-      return nil
-    end
-
-    sanitized = string
-      .downcase
-      .to_ascii
-      .gsub(/[^\w]/, "")
-
-    sanitized.empty? ? nil : sanitized
-  end
-
-  def self.sanitize_tokens(atts = {})
-    first   = sanitize(atts[:first])
-    middle  = sanitize(atts[:middle])
-    last    = sanitize(atts[:last])
-
-    return {
-      first:  first,
-      middle: middle,
-      last:   last,
-      f:      first ? first[0] : nil,
-      m:      middle ? middle[0] : nil,
-      l:      last ? last[0] : nil
-    }
-  end
-
-  def self.diminutives_for(name)
-    unless name.is_a?(String)
-      return []
-    end
-    key = name.downcase.strip
-    DIMINUTIVES[key] || []
-  end
-
-  def self.parse_exactly(addr, first:, middle:, last:, f:, m:, l:, **p)
+  def self.parse_exactly(a, n)
     case
-    when addr =~ /^#{first}$/ && first
+    when a =~ /^#{n.first}$/ && n.first
       "first"
-    when addr =~ /^#{last}$/ && last
+    when a =~ /^#{n.last}$/ && n.last
       "last"
-    when addr =~ /^#{f}#{l}$/ && f && l
+    when a =~ /^#{n.f}#{n.l}$/ && n.f && n.l
       "fl"
-    when addr =~ /^#{f}#{last}$/ && f && last
+    when a =~ /^#{n.f}#{n.last}$/ && n.f && n.last
       "flast"
-    when addr =~ /^#{f}#{m}#{last}$/ && f && m && last
+    when a =~ /^#{n.f}#{n.m}#{n.last}$/ && n.f && n.m && n.last
       "fmlast"
-    when addr =~ /^#{first}\.#{last}$/ && first && last
+    when a =~ /^#{n.first}\.#{n.last}$/ && n.first && n.last
       "first.last"
-    when addr =~ /^#{first}#{last}$/ && first && last
+    when a =~ /^#{n.first}#{n.last}$/ && n.first && n.last
       "firstlast"
-    when addr =~ /^#{f}\.#{last}$/ && f && last
+    when a =~ /^#{n.f}\.#{n.last}$/ && n.f && n.last
       "f.last"
-    when addr =~ /^#{first}\.#{m}\.#{last}$/ && first && m && last
+    when a =~ /^#{n.first}\.#{n.m}\.#{n.last}$/ && n.first && n.m && n.last
       "first.m.last"
-    when addr =~ /^#{first}_#{last}$/ && first && last
+    when a =~ /^#{n.first}_#{n.last}$/ && n.first && n.last
       "first_last"
-    when addr =~ /^#{first}_#{m}_#{last}$/ && first && m && last
+    when a =~ /^#{n.first}_#{n.m}_#{n.last}$/ && n.first && n.m && n.last
       "first_m_last"
-    when addr =~ /^#{first}#{l}$/ && first && l
+    when a =~ /^#{n.first}#{n.l}$/ && n.first && n.l
       "firstl"
+    when a =~ /^#{n.f}#{n.m}#{n.l}$/ && n.f && n.m && n.l
+      "fml"
+    when a =~ /^#{n.last}#{n.f}$/ && n.last && n.f
+      "lastf"
+    when a =~ /^#{n.first}\.#{n.l}$/ && n.first && n.l
+      "first.l"
     else
       nil
     end
   end
 
-  def self.parse_likely(addr, first:, middle:, last:, f:, m:, l:, **p)
+  def self.parse_likely(a, n)
     case
-    when addr =~ /^#{first}\.\w\.#{last}$/ && m.nil?
+    when a =~ /^#{n.first}\.\w\.#{n.last}$/ && n.m.nil?
       "first.m.last"
-    when addr =~ /^#{first}\.\w{2,}\.#{last}$/ && m.nil?
+    when a =~ /^#{n.first}\.\w{2,}\.#{n.last}$/ && n.m.nil?
       "first.middle.last"
+    when a =~ /^#{n.f}\w#{n.l}$/ && n.m.nil?
+      "fml"
     else
       nil
     end
   end
 
-  def self.build_exactly(fmt, first:, middle:, last:, f:, m:, l:, **p)
+  def self.build_exactly(f, n)
     case
-    when fmt == "first" && first
-      "#{first}"
-    when fmt == "last" && last
-      "#{last}"
-    when fmt == "fl" && f && l
-      "#{f}#{l}"
-    when fmt == "flast" && f && last
-      "#{f}#{last}"
-    when fmt == "fmlast" && f && m && last
-      "#{f}#{m}#{last}"
-    when fmt == "first.last" && first && last
-      "#{first}\.#{last}"
-    when fmt == "firstlast" && first && last
-      "#{first}#{last}"
-    when fmt == "f.last" && f && last
-      "#{f}\.#{last}"
-    when fmt == "first.m.last" && first && m && last
-      "#{first}\.#{m}\.#{last}"
-    when fmt == "first_last" && first && last
-      "#{first}_#{last}"
-    when fmt == "first_m_last" && first && m && last
-      "#{first}_#{m}_#{last}"
-    when fmt == "firstl" && first && l
-      "#{first}#{l}"
+    when f == "first" && n.first
+      "#{n.first}"
+    when f == "last" && n.last
+      "#{n.last}"
+    when f == "fl" && n.f && n.l
+      "#{n.f}#{n.l}"
+    when f == "flast" && n.f && n.last
+      "#{n.f}#{n.last}"
+    when f == "fmlast" && n.f && n.m && n.last
+      "#{n.f}#{n.m}#{n.last}"
+    when f == "first.last" && n.first && n.last
+      "#{n.first}\.#{n.last}"
+    when f == "firstlast" && n.first && n.last
+      "#{n.first}#{n.last}"
+    when f == "f.last" && n.f && n.last
+      "#{n.f}\.#{n.last}"
+    when f == "first.m.last" && n.first && n.m && n.last
+      "#{n.first}\.#{n.m}\.#{n.last}"
+    when f == "first_last" && n.first && n.last
+      "#{n.first}_#{n.last}"
+    when f == "first_m_last" && n.first && n.m && n.last
+      "#{n.first}_#{n.m}_#{n.last}"
+    when f == "firstl" && n.first && n.l
+      "#{n.first}#{n.l}"
+    when f == "fml" && n.f && n.m && n.l
+      "#{n.f}#{n.m}#{n.l}"
+    when f == "lastf" && n.last && n.f
+      "#{n.last}#{n.f}"
+    when f == "first.l" && n.first && n.l
+      "#{n.first}\.#{n.l}"
     else
       nil
     end
   end
 
-  def self.parse(address, tokens = {})
+  def self.each_format(address, tokens = {})
+    unless block_given?
+      return to_enum(:each_format, address, tokens)
+    end
+
     unless address.is_a?(String)
-      return nil
+      return
     end
 
     sanitized = address
@@ -124,15 +103,34 @@ module EmailBuilder
       .split("@")
       .first
 
-    tokens = sanitize_tokens(tokens)
-      parse_exactly(sanitized, **tokens) ||
-      parse_likely(sanitized, **tokens)
+    Name.new(tokens).each_variation do |variation|
+      if exact = parse_exactly(sanitized, variation)
+        yield exact
+      end
+      if likely = parse_likely(sanitized, variation)
+        yield likely
+      end
+    end
+  end
+
+  def self.each_address(format, tokens = {}, host = nil)
+    unless block_given?
+      return to_enum(:each_address, format, tokens, host)
+    end
+
+    Name.new(tokens).each_variation do |variation|
+      if exact = build_exactly(format, variation)
+        yield(host ? "#{exact}@#{host}" : exact)
+      end
+    end
+  end
+
+  def self.parse(address, tokens = {})
+    each_format(address, tokens).first
   end
 
   def self.build(format, tokens = {}, host = nil)
-    tokens = sanitize_tokens(tokens)
-    local = build_exactly(format, **tokens)
-    host ? "#{local}@#{host}" : local
+    each_address(format, tokens, host).first
   end
 
 end
